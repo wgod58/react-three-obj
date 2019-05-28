@@ -15,6 +15,15 @@ function loadObjAsync(filename, onProgress) {
   return new Promise((onResolve, onReject) => objLoader.load(filename, onResolve, onProgress, onReject))
 }
 
+// Creates the textureLoader
+const textureLoader = new THREE.TextureLoader()
+textureLoader.setPath('/assets/')
+
+// Wraps its load function into a promise
+function loadTextureAsync(filename, onProgress) {
+  return new Promise((onResolve, onReject) => textureLoader.load(filename, onResolve, onProgress, onReject))
+}
+
 // Note: Normally, the 3D model should already have its normals smoothed.
 function smoothNormals(group) {
   group.traverse(child => {
@@ -29,14 +38,30 @@ function smoothNormals(group) {
   return group
 }
 
-function LoadedObjModel({filename}) {
+function LoadedObjModel({ObjFilename, textureFilename}) {
   const [loadedGroup, setLoadedGroup] = useState(null)
+  const [texture, setTexture] = useState(null)
 
   useEffect(() => {
-    loadObjAsync(filename)
+    loadObjAsync(ObjFilename)
       .then(smoothNormals)
       .then(setLoadedGroup)
-  }, [filename])
+  }, [ObjFilename])
+
+  useEffect(() => {
+    loadTextureAsync(textureFilename)
+      .then(setTexture)
+  }, [textureFilename])
+
+  useEffect(() => {
+    // Assign the texture to the model if both are already loaded.
+    if (loadedGroup && texture) {
+      loadedGroup.traverse(child => {
+        if (child.isMesh)
+          child.material.map = texture
+      })
+    }
+  }, [loadedGroup, texture])
 
   return loadedGroup && <primitive object={loadedGroup} />
 }
@@ -67,7 +92,7 @@ export default function Mensuration() {
       <spotLight intensity={0.8} position={[300, 300, 400]} />
       <group position={new THREE.Vector3(0, -58, 8)}
              scale={new THREE.Vector3(0.07, 0.07, 0.07)}>
-        <LoadedObjModel filename={'guy.obj'}/>
+        <LoadedObjModel ObjFilename={'guy.obj'} textureFilename={'fabric-red-white.jpg'}/>
       </group>
     </Canvas>
   )
