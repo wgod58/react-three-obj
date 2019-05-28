@@ -15,11 +15,27 @@ function loadObjAsync(filename, onProgress) {
   return new Promise((onResolve, onReject) => objLoader.load(filename, onResolve, onProgress, onReject))
 }
 
+// Note: Normally, the 3D model should already have its normals smoothed.
+function smoothNormals(group) {
+  group.traverse(child => {
+    if (child.isMesh) {
+      const geo = new THREE.Geometry().fromBufferGeometry(child.geometry)
+      geo.mergeVertices()
+      geo.computeVertexNormals()
+      child.geometry = new THREE.BufferGeometry().fromGeometry(geo)
+    }
+  })
+
+  return group
+}
+
 function LoadedObjModel({filename}) {
   const [loadedGroup, setLoadedGroup] = useState(null)
 
   useEffect(() => {
-    loadObjAsync(filename).then(setLoadedGroup)
+    loadObjAsync(filename)
+      .then(smoothNormals)
+      .then(setLoadedGroup)
   }, [filename])
 
   return loadedGroup && <primitive object={loadedGroup} />
