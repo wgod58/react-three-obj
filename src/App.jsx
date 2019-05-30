@@ -1,12 +1,11 @@
 import React from 'react'
 import './App.css'
-import Mensuration from './component/Mensuration';
+import ModelViewer from './component/ModelViewer';
 
 function App() {
   return (
     <div className="App">
-      Hello, world!
-      <Mensuration />
+      <ModelViewer />
     </div>
   );
 }

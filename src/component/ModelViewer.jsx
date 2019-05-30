@@ -6,7 +6,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 
 extend({ OrbitControls })
 
-// Creates the objLoader
+// Creates the .obj file loader
 const objLoader = new OBJLoader()
 objLoader.setPath('/assets/')
 
@@ -15,7 +15,7 @@ function loadObjAsync(filename, onProgress) {
   return new Promise((onResolve, onReject) => objLoader.load(filename, onResolve, onProgress, onReject))
 }
 
-// Creates the textureLoader
+// Creates the texture loader
 const textureLoader = new THREE.TextureLoader()
 textureLoader.setPath('/assets/')
 
@@ -24,8 +24,8 @@ function loadTextureAsync(filename, onProgress) {
   return new Promise((onResolve, onReject) => textureLoader.load(filename, onResolve, onProgress, onReject))
 }
 
-// Note: Normally, the 3D model should already have its normals smoothed.
-function smoothNormals(group) {
+// Note: Normally, the 3D model should have its normals already set.
+function computeNormals(group) {
   group.traverse(child => {
     if (child.isMesh) {
       const geo = new THREE.Geometry().fromBufferGeometry(child.geometry)
@@ -44,7 +44,7 @@ function LoadedObjModel({ObjFilename, textureFilename}) {
 
   useEffect(() => {
     loadObjAsync(ObjFilename)
-      .then(smoothNormals)
+      .then(computeNormals)
       .then(setLoadedGroup)
   }, [ObjFilename])
 
@@ -57,8 +57,10 @@ function LoadedObjModel({ObjFilename, textureFilename}) {
     // Assign the texture to the model if both are already loaded.
     if (loadedGroup && texture) {
       loadedGroup.traverse(child => {
-        if (child.isMesh)
+        if (child.isMesh) {
+          // console.log('Texture is set on the mesh.')
           child.material.map = texture
+        }
       })
     }
   }, [loadedGroup, texture])
@@ -66,6 +68,7 @@ function LoadedObjModel({ObjFilename, textureFilename}) {
   return loadedGroup && <primitive object={loadedGroup} />
 }
 
+// Let the `orbitControls` component control the camera.
 function Controls(props) {
   const { camera } = useThree()
   const controls = useRef()
@@ -73,7 +76,7 @@ function Controls(props) {
   return <orbitControls ref={controls} args={[camera]} {...props} />
 }
 
-export default function Mensuration() {
+export default function ModelViewer() {
   // The Angle between the horizon and the vertical limit of the camera toward up and down.
   const upDownRad = 18 / 180.0 * Math.PI
 
