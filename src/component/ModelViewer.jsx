@@ -114,9 +114,54 @@ function Controls(props) {
   return <orbitControls ref={controls} args={[camera]} {...props} />
 }
 
+function AnimatedLines({pathes}) {
+  const geometry = new THREE.TubeGeometry(pathes[0], 20, 50, 8, false)
+
+  const material = new THREE.ShaderMaterial({
+    uniforms: {
+      color1: {
+        value: new THREE.Color("yellow")
+      },
+      color2: {
+        value: new THREE.Color("green")
+      }
+    },
+    vertexShader: `
+      varying vec2 vUv;
+  
+      void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform vec3 color1;
+      uniform vec3 color2;
+    
+      varying vec2 vUv;
+      
+      void main() {
+        gl_FragColor = vec4(mix(color1, color2, vUv.x), 1.0);
+      }
+    `,
+    polygonOffset: true,
+    polygonOffsetFactor: -1000,
+  })
+
+  return (
+    <mesh geometry={geometry}
+          material={material} />
+  )
+}
+
 export default function ModelViewer() {
   // The Angle between the horizon and the vertical limit of the camera toward up and down.
   const upDownRad = 18.0 / 180.0 * Math.PI
+
+  const path1 = new THREE.LineCurve3(new THREE.Vector3(0, 800, 0),
+                                     new THREE.Vector3(500, 1000, 0))
+
+  const pathes = [path1]
 
   // TODO: add the UI around the canvas
   return (
@@ -133,7 +178,10 @@ export default function ModelViewer() {
       <spotLight intensity={0.5} position={[300, 300, 400]} />
       <group position={new THREE.Vector3(0, -58, 8)}
              scale={new THREE.Vector3(0.07, 0.07, 0.07)}>
-        <LoadedObjModel ObjFilename={'guy.obj'} textureFilename={'white-fabric.jpg'}/>
+        <LoadedObjModel ObjFilename={'guy.obj'} textureFilename={'white-fabric.jpg'} />
+        <AnimatedLines pathes={pathes}
+                       radius={5.0}
+                       growthVelocity={10.0}/>
       </group>
     </Canvas>
   )
