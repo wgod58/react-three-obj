@@ -130,10 +130,10 @@ export default function ModelViewer() {
                 minPolarAngle={(Math.PI / 2) - upDownRad}
                 maxPolarAngle={(Math.PI / 2) + upDownRad} />
       <ambientLight intensity={0.5} />
-      <spotLight intensity={0.8} position={[300, 300, 400]} />
+      <spotLight intensity={0.5} position={[300, 300, 400]} />
       <group position={new THREE.Vector3(0, -58, 8)}
              scale={new THREE.Vector3(0.07, 0.07, 0.07)}>
-        <LoadedObjModel ObjFilename={'guy.obj'} textureFilename={'fabric-red-white.jpg'}/>
+        <LoadedObjModel ObjFilename={'guy.obj'} textureFilename={'white-fabric.jpg'}/>
       </group>
     </Canvas>
   )
