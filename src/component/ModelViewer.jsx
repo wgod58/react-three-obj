@@ -108,7 +108,7 @@ function LoadedObjModel({ObjFilename, textureFilename}) {
 
 // Let the `orbitControls` component control the camera.
 function Controls(props) {
-  const { camera } = useThree()
+  const {camera} = useThree()
   const controls = useRef()
   useRender(() => controls.current && controls.current.update())
   return <orbitControls ref={controls} args={[camera]} {...props} />
@@ -116,19 +116,19 @@ function Controls(props) {
 
 export default function ModelViewer() {
   // The Angle between the horizon and the vertical limit of the camera toward up and down.
-  const upDownRad = 18 / 180.0 * Math.PI
+  const upDownRad = 18.0 / 180.0 * Math.PI
 
   // TODO: add the UI around the canvas
   return (
-    <Canvas style={{ background: '#A2CCB6', height: '80vh' }}
-            camera={{ position: [0, 0, 100] }}>
+    <Canvas style={{background: '#A2CCB6', height: '80vh'}}
+            camera={{position: [0, 0, 100]}}>
       <Controls enableDamping
                 enablePan={false}
                 enableZoom={false}
                 dampingFactor={0.1}
                 rotateSpeed={0.1}
-                minPolarAngle={(Math.PI / 2) - upDownRad}
-                maxPolarAngle={(Math.PI / 2) + upDownRad} />
+                minPolarAngle={(Math.PI / 2.0) - upDownRad}
+                maxPolarAngle={(Math.PI / 2.0) + upDownRad} />
       <ambientLight intensity={0.5} />
       <spotLight intensity={0.5} position={[300, 300, 400]} />
       <group position={new THREE.Vector3(0, -58, 8)}
