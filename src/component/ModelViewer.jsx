@@ -66,7 +66,6 @@ function computeUV(group) {
   group.traverse(child => {
     if (child.isMesh) {
       const geometry = new THREE.Geometry().fromBufferGeometry(child.geometry)
-      console.log(geometry)
       computePlanarUV(geometry)
       child.geometry = new THREE.BufferGeometry().fromGeometry(geometry)
     }
@@ -97,8 +96,8 @@ function LoadedObjModel({ObjFilename, textureFilename}) {
     if (loadedGroup && texture) {
       loadedGroup.traverse(child => {
         if (child.isMesh) {
-          // console.log('Texture is set on the mesh.')
           child.material.map = texture
+          child.material.needsUpdate = true
         }
       })
     }
