@@ -38,6 +38,44 @@ function computeNormals(group) {
   return group
 }
 
+function computePlanarUV(geometry) {
+  geometry.computeBoundingBox()
+  const {min, max} = geometry.boundingBox
+  const center = new THREE.Vector2((max.x + min.x) / 2.0, (max.y + min.y) / 2.0)
+  const scale = Math.max(max.x - min.x, max.y - min.y)
+  const vertices = geometry.vertices
+
+  geometry.faceVertexUvs[0] = geometry.faces.map(face => {
+    const v1 = vertices[face.a]
+    const v2 = vertices[face.b]
+    const v3 = vertices[face.c]
+
+    return [
+        new THREE.Vector2((v1.x - center.x) / scale + 0.5, (v1.y - center.y) / scale + 0.5),
+        new THREE.Vector2((v2.x - center.x) / scale + 0.5, (v2.y - center.y) / scale + 0.5),
+        new THREE.Vector2((v3.x - center.x) / scale + 0.5, (v3.y - center.y) / scale + 0.5)
+    ]
+  })
+  
+  geometry.uvsNeedUpdate = true;
+}
+
+
+// Note: Normally, the 3D model should have its UV already set.
+function computeUV(group) {
+  group.traverse(child => {
+    if (child.isMesh) {
+      const geometry = new THREE.Geometry().fromBufferGeometry(child.geometry)
+      console.log(geometry)
+      computePlanarUV(geometry)
+      child.geometry = new THREE.BufferGeometry().fromGeometry(geometry)
+    }
+  })
+
+  return group
+}
+
+
 function LoadedObjModel({ObjFilename, textureFilename}) {
   const [loadedGroup, setLoadedGroup] = useState(null)
   const [texture, setTexture] = useState(null)
@@ -45,6 +83,7 @@ function LoadedObjModel({ObjFilename, textureFilename}) {
   useEffect(() => {
     loadObjAsync(ObjFilename)
       .then(computeNormals)
+      .then(computeUV)
       .then(setLoadedGroup)
   }, [ObjFilename])
 
