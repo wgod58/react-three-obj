@@ -115,8 +115,8 @@ function Controls(props) {
   return <orbitControls ref={controls} args={[camera]} {...props} />
 }
 
-function AnimatedLines({path, radius, growthVelocity}) {
-  const geometry = new THREE.TubeBufferGeometry(path, path.curves.length, radius, 8, false)
+function AnimatedLines({path, nbPoints, radius, closed, growthVelocity}) {
+  const geometry = new THREE.TubeBufferGeometry(path, nbPoints, radius, 8, closed)
 
   const material = new THREE.ShaderMaterial({
     uniforms: {
@@ -164,31 +164,24 @@ const measurementNames = [
   'Left Ankle Circumference'
 ]
 
-const measurementCurves = measurementNames.map(name => {
+const measurements = measurementNames.map(name => {
   const points = measurementRawData['measurement'][name]['line_points']
     .map(([x, y, z]) => new THREE.Vector3(x, y, z))
-  
-  const lines = points.map((p0, i, a) => {
-    const p1 = a[(i + 1) % a.length]
-    return new THREE.LineCurve3(p0, p1)
-  })
-  
-  const path = lines.reduce((path, line) => {
-    path.add(line)
-    return path
-  }, new THREE.CurvePath())
 
-  if (measurementRawData['measurement'][name]['closed'])
-    path.closePath()
+  const closed = measurementRawData['measurement'][name]['closed']
+  
+  const path = new THREE.CatmullRomCurve3(points, closed)
 
-  return path
+  const nbPoints = points.length
+
+  return {path, nbPoints, closed}
 })
 
 export default function ModelViewer() {
   // The Angle between the horizon and the vertical limit of the camera toward up and down.
   const upDownRad = 30.0 / 180.0 * Math.PI
 
-  const measurementCurve = measurementCurves[0]
+  const measurement = measurements[0]
 
   // TODO: add the UI around the canvas
   return (
@@ -206,8 +199,10 @@ export default function ModelViewer() {
       <group position={new THREE.Vector3(0, -58, 8)}
              scale={new THREE.Vector3(0.07, 0.07, 0.07)}>
         <LoadedObjModel ObjFilename={'guy.obj'} textureFilename={'white-fabric.jpg'} />
-        <AnimatedLines path={measurementCurve}
+        <AnimatedLines path={measurement.path}
+                       nbPoints={measurement.nbPoints}
                        radius={5.0}
+                       closed={measurement.closed}
                        growthVelocity={10.0} />
       </group>
     </Canvas>
