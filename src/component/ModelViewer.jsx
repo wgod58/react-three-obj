@@ -229,8 +229,8 @@ export default function ModelViewer() {
                        nbPoints={measurement.nbPoints}
                        radius={5.0}
                        closed={measurement.closed}
-                       color1={new THREE.Color("yellow")}
-                       color2={new THREE.Color("green")}
+                       color1={new THREE.Color(0x5def3a)}
+                       color2={new THREE.Color(0x00e9ff)}
                        animSpeed={1.0} />
       </group>
     </Canvas>
