@@ -207,32 +207,41 @@ export default function ModelViewer() {
   // The Angle between the horizon and the vertical limit of the camera toward up and down.
   const upDownRad = 30.0 / 180.0 * Math.PI
 
-  const measurement = measurements[0]
+  const [measurementIndex, setMeasurementIndex] = useState(0)
 
-  // TODO: add the UI around the canvas
+  const measurement = measurements[measurementIndex]
+
   return (
-    <Canvas style={{background: '#A2CCB6', height: '80vh'}}
-            camera={{fov: 60, position: [0, 0, 130]}}>
-      <Controls enableDamping
-                enablePan={false}
-                enableZoom={false}
-                dampingFactor={0.1}
-                rotateSpeed={0.1}
-                minPolarAngle={(Math.PI / 2.0) - upDownRad}
-                maxPolarAngle={(Math.PI / 2.0) + upDownRad} />
-      <ambientLight intensity={0.5} />
-      <spotLight intensity={0.5} position={[300, 300, 400]} />
-      <group position={new THREE.Vector3(0, -58, 8)}
-             scale={new THREE.Vector3(0.07, 0.07, 0.07)}>
-        <LoadedObjModel ObjFilename={'guy.obj'} textureFilename={'white-fabric.jpg'} />
-        <AnimatedLines path={measurement.path}
-                       nbPoints={measurement.nbPoints}
-                       radius={5.0}
-                       closed={measurement.closed}
-                       color1={new THREE.Color(0x5def3a)}
-                       color2={new THREE.Color(0x00e9ff)}
-                       animSpeed={1.0} />
-      </group>
-    </Canvas>
+    <>
+      <Canvas style={{background: '#A2CCB6', height: '80vh'}}
+              camera={{fov: 60, position: [0, 0, 130]}}>
+        <Controls enableDamping
+                  enablePan={false}
+                  enableZoom={false}
+                  dampingFactor={0.1}
+                  rotateSpeed={0.1}
+                  minPolarAngle={(Math.PI / 2.0) - upDownRad}
+                  maxPolarAngle={(Math.PI / 2.0) + upDownRad} />
+        <ambientLight intensity={0.5} />
+        <spotLight intensity={0.5} position={[300, 300, 400]} />
+        <group position={new THREE.Vector3(0, -58, 8)}
+              scale={new THREE.Vector3(0.07, 0.07, 0.07)}>
+          <LoadedObjModel ObjFilename={'guy.obj'} textureFilename={'white-fabric.jpg'} />
+          <AnimatedLines path={measurement.path}
+                        nbPoints={measurement.nbPoints}
+                        radius={5.0}
+                        closed={measurement.closed}
+                        color1={new THREE.Color(0x5def3a)}
+                        color2={new THREE.Color(0x00e9ff)}
+                        animSpeed={1.0} />
+        </group>
+      </Canvas>
+      <button onClick={()=>setMeasurementIndex(0)}>Poitrine</button>
+      <button onClick={()=>setMeasurementIndex(1)}>Biceps</button>
+      <button onClick={()=>setMeasurementIndex(2)}>Tour de taille</button>
+      <button onClick={()=>setMeasurementIndex(3)}>Hanche</button>
+      <button onClick={()=>setMeasurementIndex(4)}>Cuisse</button>
+      <button onClick={()=>setMeasurementIndex(5)}>Cheville</button>
+    </>
   )
 }
