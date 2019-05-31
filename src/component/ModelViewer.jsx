@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { extend, Canvas, useThree, useRender } from 'react-three-fiber'
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+import measurementRawData from '../data/measurements'
 
 extend({ OrbitControls })
 
@@ -114,8 +115,8 @@ function Controls(props) {
   return <orbitControls ref={controls} args={[camera]} {...props} />
 }
 
-function AnimatedLines({pathes}) {
-  const geometry = new THREE.TubeGeometry(pathes[0], 20, 50, 8, false)
+function AnimatedLines({path, radius, growthVelocity}) {
+  const geometry = new THREE.TubeBufferGeometry(path, path.curves.length, radius, 8, false)
 
   const material = new THREE.ShaderMaterial({
     uniforms: {
@@ -154,14 +155,40 @@ function AnimatedLines({pathes}) {
   )
 }
 
+const measurementNames = [
+  'Chest Circumference',
+  'Right Upper Arm Circumference',
+  'Narrow Waist Circumference',
+  'High Hip Circumference',
+  'Left Thigh Circumference',
+  'Left Ankle Circumference'
+]
+
+const measurementCurves = measurementNames.map(name => {
+  const points = measurementRawData['measurement'][name]['line_points']
+    .map(([x, y, z]) => new THREE.Vector3(x, y, z))
+  
+  const lines = points.map((p0, i, a) => {
+    const p1 = a[(i + 1) % a.length]
+    return new THREE.LineCurve3(p0, p1)
+  })
+  
+  const path = lines.reduce((path, line) => {
+    path.add(line)
+    return path
+  }, new THREE.CurvePath())
+
+  if (measurementRawData['measurement'][name]['closed'])
+    path.closePath()
+
+  return path
+})
+
 export default function ModelViewer() {
   // The Angle between the horizon and the vertical limit of the camera toward up and down.
-  const upDownRad = 18.0 / 180.0 * Math.PI
+  const upDownRad = 30.0 / 180.0 * Math.PI
 
-  const path1 = new THREE.LineCurve3(new THREE.Vector3(0, 800, 0),
-                                     new THREE.Vector3(500, 1000, 0))
-
-  const pathes = [path1]
+  const measurementCurve = measurementCurves[0]
 
   // TODO: add the UI around the canvas
   return (
@@ -179,9 +206,9 @@ export default function ModelViewer() {
       <group position={new THREE.Vector3(0, -58, 8)}
              scale={new THREE.Vector3(0.07, 0.07, 0.07)}>
         <LoadedObjModel ObjFilename={'guy.obj'} textureFilename={'white-fabric.jpg'} />
-        <AnimatedLines pathes={pathes}
+        <AnimatedLines path={measurementCurve}
                        radius={5.0}
-                       growthVelocity={10.0}/>
+                       growthVelocity={10.0} />
       </group>
     </Canvas>
   )
