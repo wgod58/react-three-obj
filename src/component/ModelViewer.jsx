@@ -149,7 +149,7 @@ function AnimatedLines({path, nbPoints, radius, closed, color1, color2, animSpee
         varying vec2 vUv;
         
         void main() {
-          float t = mod(vUv.x + time, 1.0);
+          float t = mod(vUv.x - time, 1.0);
 
           // Ping pong function between 0.0 and 1.0
           t = t * 2.0;
@@ -239,11 +239,11 @@ export default function ModelViewer() {
           <LoadedObjModel ObjFilename={'guy.obj'} textureFilename={'white-fabric.jpg'} />
           <AnimatedLines path={measurement.path}
                         nbPoints={measurement.nbPoints}
-                        radius={5.0}
+                        radius={6.0}
                         closed={measurement.closed}
                         color1={new THREE.Color(0x5def3a)}
                         color2={new THREE.Color(0x00e9ff)}
-                        animSpeed={1.0} />
+                        animSpeed={1.2} />
         </group>
       </Canvas>
       <button onClick={()=>setMeasurementIndex(0)}>Poitrine</button>
