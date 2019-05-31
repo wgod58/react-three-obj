@@ -157,20 +157,30 @@ function AnimatedLines({path, nbPoints, radius, closed, color1, color2, animSpee
             t = 2.0 - t;
           }
 
-          gl_FragColor = vec4(mix(color1, color2, t), 1.0);
+          float alpha = step(vUv.x, time);
+
+          gl_FragColor = vec4(mix(color1, color2, t), alpha);
         }
       `,
       polygonOffset: true,
       polygonOffsetFactor: -1000,
+      transparent: true
     })
   }, [color1, color2])
 
   const [time, setTime] = useState(0.0)
+
+  // Reset the time state each time the path is changed.
+  useEffect(() => {
+    setTime(0)
+  }, [path])
+
+  // Update the time state at each gl render iteration.
   useRender(threeState => {
     setTime(time => time + 0.01 * animSpeed)
   })
 
-  // Updates the material's time parameter.
+  // Updates the material's time parameter each time the time state changes.
   useEffect(() => {
     material.uniforms.time.value = time
   }, [time])
