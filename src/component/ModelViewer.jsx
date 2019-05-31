@@ -212,7 +212,7 @@ export default function ModelViewer() {
   // TODO: add the UI around the canvas
   return (
     <Canvas style={{background: '#A2CCB6', height: '80vh'}}
-            camera={{position: [0, 0, 100]}}>
+            camera={{fov: 60, position: [0, 0, 130]}}>
       <Controls enableDamping
                 enablePan={false}
                 enableZoom={false}
