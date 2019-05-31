@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { extend, Canvas, useThree, useRender } from 'react-three-fiber'
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
@@ -115,39 +115,65 @@ function Controls(props) {
   return <orbitControls ref={controls} args={[camera]} {...props} />
 }
 
-function AnimatedLines({path, nbPoints, radius, closed, growthVelocity}) {
-  const geometry = new THREE.TubeBufferGeometry(path, nbPoints, radius, 8, closed)
+function AnimatedLines({path, nbPoints, radius, closed, color1, color2, animSpeed}) {
+  const geometry = useMemo(() => {
+    return new THREE.TubeBufferGeometry(path, nbPoints, radius, 8, closed)
+  }, [path, nbPoints, radius, closed])
 
-  const material = new THREE.ShaderMaterial({
-    uniforms: {
-      color1: {
-        value: new THREE.Color("yellow")
+  const material = useMemo(() => {
+    return new THREE.ShaderMaterial({
+      uniforms: {
+        color1: {
+          value: color1
+        },
+        color2: {
+          value: color2
+        },
+        time: {
+          value: 0.0
+        }
       },
-      color2: {
-        value: new THREE.Color("green")
-      }
-    },
-    vertexShader: `
-      varying vec2 vUv;
-  
-      void main() {
-        vUv = uv;
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-      }
-    `,
-    fragmentShader: `
-      uniform vec3 color1;
-      uniform vec3 color2;
+      vertexShader: `
+        varying vec2 vUv;
     
-      varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform vec3 color1;
+        uniform vec3 color2;
+        uniform float time;
       
-      void main() {
-        gl_FragColor = vec4(mix(color1, color2, vUv.x), 1.0);
-      }
-    `,
-    polygonOffset: true,
-    polygonOffsetFactor: -1000,
+        varying vec2 vUv;
+        
+        void main() {
+          float t = mod(vUv.x + time, 1.0);
+
+          // Ping pong function between 0.0 and 1.0
+          t = t * 2.0;
+          if (t >= 1.0) {
+            t = 2.0 - t;
+          }
+
+          gl_FragColor = vec4(mix(color1, color2, t), 1.0);
+        }
+      `,
+      polygonOffset: true,
+      polygonOffsetFactor: -1000,
+    })
+  }, [color1, color2])
+
+  const [time, setTime] = useState(0.0)
+  useRender(threeState => {
+    setTime(time => time + 0.01 * animSpeed)
   })
+
+  // Updates the material's time parameter.
+  useEffect(() => {
+    material.uniforms.time.value = time
+  }, [time])
 
   return (
     <mesh geometry={geometry}
@@ -203,7 +229,9 @@ export default function ModelViewer() {
                        nbPoints={measurement.nbPoints}
                        radius={5.0}
                        closed={measurement.closed}
-                       growthVelocity={10.0} />
+                       color1={new THREE.Color("yellow")}
+                       color2={new THREE.Color("green")}
+                       animSpeed={1.0} />
       </group>
     </Canvas>
   )
