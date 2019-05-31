@@ -217,6 +217,7 @@ export default function ModelViewer() {
   // The Angle between the horizon and the vertical limit of the camera toward up and down.
   const upDownRad = 30.0 / 180.0 * Math.PI
 
+  const [textureFilename, setTextureFilename] = useState('white-fabric.jpg')
   const [measurementIndex, setMeasurementIndex] = useState(0)
 
   const measurement = measurements[measurementIndex]
@@ -236,7 +237,7 @@ export default function ModelViewer() {
         <spotLight intensity={0.5} position={[300, 300, 400]} />
         <group position={new THREE.Vector3(0, -58, 8)}
               scale={new THREE.Vector3(0.07, 0.07, 0.07)}>
-          <LoadedObjModel ObjFilename={'guy.obj'} textureFilename={'white-fabric.jpg'} />
+          <LoadedObjModel ObjFilename={'guy.obj'} textureFilename={textureFilename} />
           <AnimatedLines path={measurement.path}
                         nbPoints={measurement.nbPoints}
                         radius={6.0}
@@ -252,6 +253,9 @@ export default function ModelViewer() {
       <button onClick={()=>setMeasurementIndex(3)}>Hanche</button>
       <button onClick={()=>setMeasurementIndex(4)}>Cuisse</button>
       <button onClick={()=>setMeasurementIndex(5)}>Cheville</button>
+
+      <button onClick={()=>setTextureFilename('white-fabric.jpg')}>Texture 1</button>
+      <button onClick={()=>setTextureFilename('fabric-red-white.jpg')}>Texture 2</button>
     </>
   )
 }
