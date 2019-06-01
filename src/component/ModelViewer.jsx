@@ -288,6 +288,7 @@ export default function ModelViewer() {
                   maxPolarAngle={(Math.PI / 2.0) + upDownRad} />
         <ambientLight intensity={0.5} />
         <spotLight intensity={0.5} position={[300, 300, 400]} />
+        <spotLight intensity={0.5} position={[-300, 300, -400]} />
         <BackgroundSphere colorGround={new THREE.Color(0xa0a0a0)}
                           colorSky={new THREE.Color(0xefefef)}
                           horizonFactor={4.0} />
@@ -300,7 +301,7 @@ export default function ModelViewer() {
                         closed={measurement.closed}
                         color1={new THREE.Color(0x5def3a)}
                         color2={new THREE.Color(0x00e9ff)}
-                        animSpeed={1.2} />
+                        animSpeed={1.4} />
         </group>
       </Canvas>
       <button onClick={()=>setMeasurementIndex(0)}>Poitrine</button>
