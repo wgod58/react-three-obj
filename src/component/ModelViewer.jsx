@@ -115,6 +115,59 @@ function Controls(props) {
   return <orbitControls ref={controls} args={[camera]} {...props} />
 }
 
+function BackgroundSphere({colorGround, colorSky, horizonFactor}) {
+  // The horizonFactor should be greater or equal to 1,
+  // It represents the portion of the environment's arc from the bottom to the top
+  // that we want to be filled with the color gradiant.
+  // A value of 1 represent a gradiant from the bottom to the top,
+  // a value of 10 represent a thinner horizon where
+  // the ground and sky's colors are blending.
+
+  const material = useMemo(() => {
+    return new THREE.ShaderMaterial({
+      uniforms: {
+        colorGround: {
+          value: colorGround
+        },
+        colorSky: {
+          value: colorSky
+        },
+        horizonFactor: {
+          value: horizonFactor
+        }
+      },
+      vertexShader: `
+        varying vec2 vUv;
+    
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform vec3 colorGround;
+        uniform vec3 colorSky;
+        uniform float horizonFactor;
+      
+        varying vec2 vUv;
+        
+        void main() {
+          float h = clamp((vUv.y - 0.5) * horizonFactor + 0.5, 0.0, 1.0);
+          gl_FragColor = vec4(mix(colorGround, colorSky, h), 1);
+        }
+      `,
+      side: THREE.BackSide
+    })
+  }, [colorGround, colorSky, horizonFactor])
+
+  const geometry = new THREE.SphereBufferGeometry(200, 32, 32)
+
+  return (
+    <mesh geometry={geometry}
+          material={material} />
+  )
+}
+
 function AnimatedLines({path, nbPoints, radius, closed, color1, color2, animSpeed}) {
   const geometry = useMemo(() => {
     return new THREE.TubeBufferGeometry(path, nbPoints, radius, 8, closed)
@@ -235,6 +288,9 @@ export default function ModelViewer() {
                   maxPolarAngle={(Math.PI / 2.0) + upDownRad} />
         <ambientLight intensity={0.5} />
         <spotLight intensity={0.5} position={[300, 300, 400]} />
+        <BackgroundSphere colorGround={new THREE.Color(0xa0a0a0)}
+                          colorSky={new THREE.Color(0xefefef)}
+                          horizonFactor={4.0} />
         <group position={new THREE.Vector3(0, -58, 8)}
               scale={new THREE.Vector3(0.07, 0.07, 0.07)}>
           <LoadedObjModel ObjFilename={'guy.obj'} textureFilename={textureFilename} />
