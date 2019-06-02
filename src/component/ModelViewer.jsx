@@ -268,12 +268,16 @@ const measurements = measurementNames.map(name => {
 
 export default function ModelViewer() {
   // The Angle between the horizon and the vertical limit of the camera toward up and down.
-  const upDownRad = 30.0 / 180.0 * Math.PI
+  const upDownRad = 90.0 / 180.0 * Math.PI
 
   const [textureFilename, setTextureFilename] = useState('white-fabric.jpg')
-  const [measurementIndex, setMeasurementIndex] = useState(0)
+  const [measurementIndex, setMeasurementIndex] = useState(-1)
 
-  const measurement = measurements[measurementIndex]
+  const onMeasurementButtonPressed = index => {
+    setMeasurementIndex(index === measurementIndex ? -1 : index)
+  }
+
+  const measurement = measurementIndex >= 0 ? measurements[measurementIndex] : null
 
   return (
     <>
@@ -281,7 +285,9 @@ export default function ModelViewer() {
               camera={{fov: 60, position: [0, 0, 130]}}>
         <Controls enableDamping
                   enablePan={false}
-                  enableZoom={false}
+                  enableZoom={true}
+                  minDistance={40}
+                  maxDistance={130}
                   dampingFactor={0.1}
                   rotateSpeed={0.1}
                   minPolarAngle={(Math.PI / 2.0) - upDownRad}
@@ -295,21 +301,21 @@ export default function ModelViewer() {
         <group position={new THREE.Vector3(0, -58, 8)}
               scale={new THREE.Vector3(0.07, 0.07, 0.07)}>
           <LoadedObjModel ObjFilename={'guy.obj'} textureFilename={textureFilename} />
-          <AnimatedLines path={measurement.path}
-                        nbPoints={measurement.nbPoints}
-                        radius={6.0}
-                        closed={measurement.closed}
-                        color1={new THREE.Color(0x5def3a)}
-                        color2={new THREE.Color(0x00e9ff)}
-                        animSpeed={1.4} />
+          {measurement && (<AnimatedLines path={measurement.path}
+                                          nbPoints={measurement.nbPoints}
+                                          radius={4.0}
+                                          closed={measurement.closed}
+                                          color1={new THREE.Color(0x5def3a)}
+                                          color2={new THREE.Color(0x00e9ff)}
+                                          animSpeed={1.4} />)}
         </group>
       </Canvas>
-      <button onClick={()=>setMeasurementIndex(0)}>Poitrine</button>
-      <button onClick={()=>setMeasurementIndex(1)}>Biceps</button>
-      <button onClick={()=>setMeasurementIndex(2)}>Tour de taille</button>
-      <button onClick={()=>setMeasurementIndex(3)}>Hanche</button>
-      <button onClick={()=>setMeasurementIndex(4)}>Cuisse</button>
-      <button onClick={()=>setMeasurementIndex(5)}>Cheville</button>
+      <button onClick={()=>onMeasurementButtonPressed(0)}>Poitrine</button>
+      <button onClick={()=>onMeasurementButtonPressed(1)}>Biceps</button>
+      <button onClick={()=>onMeasurementButtonPressed(2)}>Tour de taille</button>
+      <button onClick={()=>onMeasurementButtonPressed(3)}>Hanche</button>
+      <button onClick={()=>onMeasurementButtonPressed(4)}>Cuisse</button>
+      <button onClick={()=>onMeasurementButtonPressed(5)}>Cheville</button>
 
       <button onClick={()=>setTextureFilename('white-fabric.jpg')}>Texture 1</button>
       <button onClick={()=>setTextureFilename('fabric-red-white.jpg')}>Texture 2</button>
