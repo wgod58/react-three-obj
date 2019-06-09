@@ -168,12 +168,12 @@ function BackgroundSphere({colorGround, colorSky, horizonFactor}) {
   )
 }
 
-function AnimatedLines({path, nbPoints, radius, closed, color1, color2, animSpeed}) {
+function AnimatedLines({path, nbPoints, radius, closed, color1, color2, backColorsOpacity, animSpeed}) {
   const geometry = useMemo(() => {
     return new THREE.TubeBufferGeometry(path, nbPoints, radius, 8, closed)
   }, [path, nbPoints, radius, closed])
 
-  const material = useMemo(() => {
+  const materialBack = useMemo(() => {
     return new THREE.ShaderMaterial({
       uniforms: {
         color1: {
@@ -181,6 +181,9 @@ function AnimatedLines({path, nbPoints, radius, closed, color1, color2, animSpee
         },
         color2: {
           value: color2
+        },
+        opacity: {
+          value: backColorsOpacity
         },
         time: {
           value: 0.0
@@ -197,6 +200,7 @@ function AnimatedLines({path, nbPoints, radius, closed, color1, color2, animSpee
       fragmentShader: `
         uniform vec3 color1;
         uniform vec3 color2;
+        uniform float opacity;
         uniform float time;
       
         varying vec2 vUv;
@@ -212,11 +216,61 @@ function AnimatedLines({path, nbPoints, radius, closed, color1, color2, animSpee
 
           float alpha = step(vUv.x, time);
 
-          gl_FragColor = vec4(mix(color1, color2, t), alpha);
+          gl_FragColor = vec4(mix(color1, color2, t), alpha * opacity);
         }
       `,
-      polygonOffset: true,
-      polygonOffsetFactor: -1000,
+      depthWrite: false,
+      depthFunc: THREE.GreaterDepth,
+      transparent: true,
+    })
+  }, [color1, color2, backColorsOpacity])
+
+  const materialFront = useMemo(() => {
+    return new THREE.ShaderMaterial({
+      uniforms: {
+        color1: {
+          value: color1
+        },
+        color2: {
+          value: color2
+        },
+        opacity: {
+          value: 1.0
+        },
+        time: {
+          value: 0.0
+        }
+      },
+      vertexShader: `
+        varying vec2 vUv;
+    
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform vec3 color1;
+        uniform vec3 color2;
+        uniform float opacity;
+        uniform float time;
+      
+        varying vec2 vUv;
+        
+        void main() {
+          float t = mod(vUv.x - time, 1.0);
+
+          // Ping pong function between 0.0 and 1.0
+          t = t * 2.0;
+          if (t >= 1.0) {
+            t = 2.0 - t;
+          }
+
+          float alpha = step(vUv.x, time);
+
+          gl_FragColor = vec4(mix(color1, color2, t), alpha * opacity);
+        }
+      `,
       transparent: true
     })
   }, [color1, color2])
@@ -235,12 +289,17 @@ function AnimatedLines({path, nbPoints, radius, closed, color1, color2, animSpee
 
   // Updates the material's time parameter each time the time state changes.
   useEffect(() => {
-    material.uniforms.time.value = time
+    materialBack.uniforms.time.value = time
+    materialFront.uniforms.time.value = time
   }, [time])
 
   return (
-    <mesh geometry={geometry}
-          material={material} />
+    <>
+      <mesh geometry={geometry}
+            material={materialBack} />
+      <mesh geometry={geometry}
+            material={materialFront} />
+    </>
   )
 }
 
@@ -307,6 +366,7 @@ export default function ModelViewer() {
                                           closed={measurement.closed}
                                           color1={new THREE.Color(0x5def3a)}
                                           color2={new THREE.Color(0x00e9ff)}
+                                          backColorsOpacity={0.3}
                                           animSpeed={1.4} />)}
         </group>
       </Canvas>
