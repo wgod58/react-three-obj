@@ -1,3 +1,51 @@
+# Documentation for Imersive
+
+## Start the project
+
+```shell
+npm install
+npm start
+```
+
+The webpage should open in a browser. The project is reloading the page when the source code is modified.
+Please see the documentation from the template below for more details about the project's setup.
+It was made using the `create-react-app` template.
+
+## The source code
+
+The source code is using the library `[react-three-fiber](https://github.com/drcmda/react-three-fiber)`
+that wraps some of the THREE.JS 3D primitives inside of React components.
+
+Most of the code should be very straight forward to read as it is using the React approach
+to combine together the 3D primitives of the 3D scene.
+The code is easy to tweak, the parameters are passed to the components via Props, same as React.
+
+The main file containing all the source code is in `src/component/ModelViewer.jsx`, and the main component
+is at the very bottom of the file, named `ModelViewer`.
+It is written directly as a render function using React Hooks.
+
+The 3D scene is described within the `<Canvas>...</Canvas>` tags. The primitives
+represented inside are displayed 30~60 times per second (I am not sure what is the default refresh rate of THREE.JS).
+To give the impression of moving the model on the side of the screen, you can either change the position of the camera or change the position of the group which contains the human 3D model and the animated line component (at the line 360).
+
+There is an example of a value being animated inside the `AnimatedLines` component, you can use the same technic or use a third party library if you prefer (maybe https://react-move.js.org/).
+
+`Controls` is the component that controls the position of the camera around a fixed point. It responds to user inputs and is documented in THREE.JS.
+
+`BackgroundSphere` is a big sphere that is around the scene, it displays the background.
+
+The rest of the code should be easy to read. If you still need some explanations about
+something specific, please send me an email and I will try to answer within a few days.
+
+Do not hesitate to look into the Git repository's history to understand how each part
+was added, it may help.
+
+-- Vincent
+
+--------------------------------------------------------------------------------
+
+# Documentation from the template
+
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
 ## Available Scripts
