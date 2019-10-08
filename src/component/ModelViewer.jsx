@@ -41,7 +41,7 @@ function computeNormals(group) {
 
 function computePlanarUV(geometry) {
   geometry.computeBoundingBox()
-  const {min, max} = geometry.boundingBox
+  const { min, max } = geometry.boundingBox
   const center = new THREE.Vector2((max.x + min.x) / 2.0, (max.y + min.y) / 2.0)
   const scale = Math.max(max.x - min.x, max.y - min.y)
   const vertices = geometry.vertices
@@ -52,12 +52,12 @@ function computePlanarUV(geometry) {
     const v3 = vertices[face.c]
 
     return [
-        new THREE.Vector2((v1.x - center.x) / scale + 0.5, (v1.y - center.y) / scale + 0.5),
-        new THREE.Vector2((v2.x - center.x) / scale + 0.5, (v2.y - center.y) / scale + 0.5),
-        new THREE.Vector2((v3.x - center.x) / scale + 0.5, (v3.y - center.y) / scale + 0.5)
+      new THREE.Vector2((v1.x - center.x) / scale + 0.5, (v1.y - center.y) / scale + 0.5),
+      new THREE.Vector2((v2.x - center.x) / scale + 0.5, (v2.y - center.y) / scale + 0.5),
+      new THREE.Vector2((v3.x - center.x) / scale + 0.5, (v3.y - center.y) / scale + 0.5)
     ]
   })
-  
+
   geometry.uvsNeedUpdate = true;
 }
 
@@ -76,7 +76,7 @@ function computeUV(group) {
 }
 
 
-function LoadedObjModel({ObjFilename, textureFilename}) {
+function LoadedObjModel({ ObjFilename, textureFilename }) {
   const [loadedGroup, setLoadedGroup] = useState(null)
   const [texture, setTexture] = useState(null)
 
@@ -109,13 +109,13 @@ function LoadedObjModel({ObjFilename, textureFilename}) {
 
 // Let the `orbitControls` component control the camera.
 function Controls(props) {
-  const {camera} = useThree()
+  const { camera } = useThree()
   const controls = useRef()
   useRender(() => controls.current && controls.current.update())
   return <orbitControls ref={controls} args={[camera]} {...props} />
 }
 
-function BackgroundSphere({colorGround, colorSky, horizonFactor}) {
+function BackgroundSphere({ colorGround, colorSky, horizonFactor }) {
   // The horizonFactor should be greater or equal to 1,
   // It represents the portion of the environment's arc from the bottom to the top
   // that we want to be filled with the color gradiant.
@@ -164,11 +164,11 @@ function BackgroundSphere({colorGround, colorSky, horizonFactor}) {
 
   return (
     <mesh geometry={geometry}
-          material={material} />
+      material={material} />
   )
 }
 
-function AnimatedLines({path, nbPoints, radius, closed, color1, color2, backColorsOpacity, animSpeed}) {
+function AnimatedLines({ path, nbPoints, radius, closed, color1, color2, backColorsOpacity, animSpeed }) {
   const geometry = useMemo(() => {
     return new THREE.TubeBufferGeometry(path, nbPoints, radius, 8, closed)
   }, [path, nbPoints, radius, closed])
@@ -296,9 +296,9 @@ function AnimatedLines({path, nbPoints, radius, closed, color1, color2, backColo
   return (
     <>
       <mesh geometry={geometry}
-            material={materialBack} />
+        material={materialBack} />
       <mesh geometry={geometry}
-            material={materialFront} />
+        material={materialFront} />
     </>
   )
 }
@@ -317,12 +317,12 @@ const measurements = measurementNames.map(name => {
     .map(([x, y, z]) => new THREE.Vector3(x, y, z))
 
   const closed = measurementRawData['measurement'][name]['closed']
-  
+
   const path = new THREE.CatmullRomCurve3(points, closed)
 
   const nbPoints = points.length
 
-  return {path, nbPoints, closed}
+  return { path, nbPoints, closed }
 })
 
 export default function ModelViewer() {
@@ -340,45 +340,45 @@ export default function ModelViewer() {
 
   return (
     <>
-      <Canvas style={{background: '#A2CCB6', height: '80vh'}}
-              camera={{fov: 60, position: [0, 0, 130]}}>
+      <Canvas style={{ background: '#A2CCB6', height: '80vh' }}
+        camera={{ fov: 60, position: [0, 0, 130] }}>
         <Controls enableDamping
-                  enablePan={false}
-                  enableZoom={true}
-                  minDistance={40}
-                  maxDistance={130}
-                  dampingFactor={0.1}
-                  rotateSpeed={0.1}
-                  minPolarAngle={(Math.PI / 2.0) - upDownRad}
-                  maxPolarAngle={(Math.PI / 2.0) + upDownRad} />
+          enablePan={false}
+          enableZoom={true}
+          minDistance={40}
+          maxDistance={130}
+          dampingFactor={0.1}
+          rotateSpeed={0.1}
+          minPolarAngle={(Math.PI / 2.0) - upDownRad}
+          maxPolarAngle={(Math.PI / 2.0) + upDownRad} />
         <ambientLight intensity={0.5} />
         <spotLight intensity={0.5} position={[300, 300, 400]} />
         <spotLight intensity={0.5} position={[-300, 300, -400]} />
         <BackgroundSphere colorGround={new THREE.Color(0xa0a0a0)}
-                          colorSky={new THREE.Color(0xefefef)}
-                          horizonFactor={4.0} />
+          colorSky={new THREE.Color(0xefefef)}
+          horizonFactor={4.0} />
         <group position={new THREE.Vector3(0, -58, 8)}
-              scale={new THREE.Vector3(0.07, 0.07, 0.07)}>
+          scale={new THREE.Vector3(0.07, 0.07, 0.07)}>
           <LoadedObjModel ObjFilename={'guy.obj'} textureFilename={textureFilename} />
           {measurement && (<AnimatedLines path={measurement.path}
-                                          nbPoints={measurement.nbPoints}
-                                          radius={4.0}
-                                          closed={measurement.closed}
-                                          color1={new THREE.Color(0x5def3a)}
-                                          color2={new THREE.Color(0x00e9ff)}
-                                          backColorsOpacity={0.3}
-                                          animSpeed={1.4} />)}
+            nbPoints={measurement.nbPoints}
+            radius={4.0}
+            closed={measurement.closed}
+            color1={new THREE.Color(0x5def3a)}
+            color2={new THREE.Color(0x00e9ff)}
+            backColorsOpacity={0.3}
+            animSpeed={1.4} />)}
         </group>
       </Canvas>
-      <button onClick={()=>onMeasurementButtonPressed(0)}>Poitrine</button>
-      <button onClick={()=>onMeasurementButtonPressed(1)}>Biceps</button>
-      <button onClick={()=>onMeasurementButtonPressed(2)}>Tour de taille</button>
-      <button onClick={()=>onMeasurementButtonPressed(3)}>Hanche</button>
-      <button onClick={()=>onMeasurementButtonPressed(4)}>Cuisse</button>
-      <button onClick={()=>onMeasurementButtonPressed(5)}>Cheville</button>
+      <button onClick={() => onMeasurementButtonPressed(0)}>Poitrine</button>
+      <button onClick={() => onMeasurementButtonPressed(1)}>Biceps</button>
+      <button onClick={() => onMeasurementButtonPressed(2)}>Tour de taille</button>
+      <button onClick={() => onMeasurementButtonPressed(3)}>Hanche</button>
+      <button onClick={() => onMeasurementButtonPressed(4)}>Cuisse</button>
+      <button onClick={() => onMeasurementButtonPressed(5)}>Cheville</button>
 
-      <button onClick={()=>setTextureFilename('white-fabric.jpg')}>Texture 1</button>
-      <button onClick={()=>setTextureFilename('fabric-red-white.jpg')}>Texture 2</button>
+      <button onClick={() => setTextureFilename('white-fabric.jpg')}>Texture 1</button>
+      <button onClick={() => setTextureFilename('fabric-red-white.jpg')}>Texture 2</button>
     </>
   )
 }
