@@ -4,7 +4,13 @@ import { extend, Canvas, useThree, useRender } from 'react-three-fiber'
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import measurementRawData from '../data/measurements'
+import StyleMap, {
+  typeMap as skinTypeMap,
+  // reset as skinReset,
+} from './modelViewStyle'
+import { SketchPicker } from 'react-color'
 
+// new THREE.MeshBasicMaterial()
 extend({ OrbitControls })
 
 // Creates the .obj file loader
@@ -12,9 +18,10 @@ const objLoader = new OBJLoader()
 objLoader.setPath('/assets/')
 
 // Wraps its load function into a promise
-function loadObjAsync(filename, onProgress) {
-  return new Promise((onResolve, onReject) => objLoader.load(filename, onResolve, onProgress, onReject))
-}
+const loadObjAsync = (filename, onProgress) =>
+  new Promise((resolve, reject) =>
+    objLoader.load(filename, resolve, onProgress, reject),
+  )
 
 // Creates the texture loader
 const textureLoader = new THREE.TextureLoader()
@@ -22,7 +29,9 @@ textureLoader.setPath('/assets/')
 
 // Wraps its load function into a promise
 function loadTextureAsync(filename, onProgress) {
-  return new Promise((onResolve, onReject) => textureLoader.load(filename, onResolve, onProgress, onReject))
+  return new Promise((resolve, reject) =>
+    textureLoader.load(filename, resolve, onProgress, reject),
+  )
 }
 
 // Note: Normally, the 3D model should have its normals already set.
@@ -52,15 +61,23 @@ function computePlanarUV(geometry) {
     const v3 = vertices[face.c]
 
     return [
-      new THREE.Vector2((v1.x - center.x) / scale + 0.5, (v1.y - center.y) / scale + 0.5),
-      new THREE.Vector2((v2.x - center.x) / scale + 0.5, (v2.y - center.y) / scale + 0.5),
-      new THREE.Vector2((v3.x - center.x) / scale + 0.5, (v3.y - center.y) / scale + 0.5)
+      new THREE.Vector2(
+        (v1.x - center.x) / scale + 0.5,
+        (v1.y - center.y) / scale + 0.5,
+      ),
+      new THREE.Vector2(
+        (v2.x - center.x) / scale + 0.5,
+        (v2.y - center.y) / scale + 0.5,
+      ),
+      new THREE.Vector2(
+        (v3.x - center.x) / scale + 0.5,
+        (v3.y - center.y) / scale + 0.5,
+      ),
     ]
   })
 
-  geometry.uvsNeedUpdate = true;
+  geometry.uvsNeedUpdate = true
 }
-
 
 // Note: Normally, the 3D model should have its UV already set.
 function computeUV(group) {
@@ -74,9 +91,59 @@ function computeUV(group) {
 
   return group
 }
+const setMaterils = (type, params) => group => {
+  group.traverse(child => {
+    if (child.isMesh) {
+      StyleMap[type](child, params)
+    }
+  })
+}
 
+const skinSwitch = (group, isSkin) => {
+  group.traverse(child => {
+    if (child.isMesh) {
+      child.material.wireframe = isSkin
+    }
+  })
+}
 
-function LoadedObjModel({ ObjFilename, textureFilename }) {
+const removeWireframe = group => {
+  group.traverse(child => {
+    if (child.isMesh) {
+      child.children = child.children.filter(c => !c.isLine)
+    }
+  })
+}
+
+const putWireframe = (group, { color }) => {
+  group.traverse(child => {
+    if (child.isMesh) {
+      var geo = new THREE.EdgesGeometry(child.geometry) // or WireframeGeometry
+      var mat = new THREE.LineBasicMaterial({
+        color: color,
+      })
+      var wireframe = new THREE.LineSegments(geo, mat)
+      child.add(wireframe)
+    }
+  })
+}
+
+const defaultSetting = group => {
+  group.traverse(child => {
+    if (child.isMesh) {
+      child.material.needsUpdate = true
+    }
+  })
+}
+
+function LoadedObjModel({
+  ObjFilename,
+  textureFilename,
+  isWireframe,
+  wireframeColor,
+  isSkin,
+  skinType,
+}) {
   const [loadedGroup, setLoadedGroup] = useState(null)
   const [texture, setTexture] = useState(null)
 
@@ -88,21 +155,34 @@ function LoadedObjModel({ ObjFilename, textureFilename }) {
   }, [ObjFilename])
 
   useEffect(() => {
-    loadTextureAsync(textureFilename)
-      .then(setTexture)
+    loadTextureAsync(textureFilename).then(setTexture)
   }, [textureFilename])
 
   useEffect(() => {
     // Assign the texture to the model if both are already loaded.
     if (loadedGroup && texture) {
       loadedGroup.traverse(child => {
-        if (child.isMesh) {
-          child.material.map = texture
-          child.material.needsUpdate = true
-        }
+        // if (child.isMesh) {
+        //   materialHandler(child, skinTypeMap.IRON_SKIN, {
+        //     map: texture,
+        //   })
+        // }
       })
     }
   }, [loadedGroup, texture])
+
+  if (loadedGroup) {
+    setMaterils(skinType, {
+      map: texture,
+    })(loadedGroup)
+    if (isWireframe && !isSkin) {
+      putWireframe(loadedGroup, { color: wireframeColor })
+    } else {
+      removeWireframe(loadedGroup)
+    }
+    skinSwitch(loadedGroup, isSkin)
+    defaultSetting(loadedGroup)
+  }
 
   return loadedGroup && <primitive object={loadedGroup} />
 }
@@ -111,8 +191,15 @@ function LoadedObjModel({ ObjFilename, textureFilename }) {
 function Controls(props) {
   const { camera } = useThree()
   const controls = useRef()
+
   useRender(() => controls.current && controls.current.update())
-  return <orbitControls ref={controls} args={[camera]} {...props} />
+  return (
+    <orbitControls
+      ref={controls}
+      args={[camera, document.getElementById('camera-body')]}
+      {...props}
+    />
+  )
 }
 
 function BackgroundSphere({ colorGround, colorSky, horizonFactor }) {
@@ -127,18 +214,18 @@ function BackgroundSphere({ colorGround, colorSky, horizonFactor }) {
     return new THREE.ShaderMaterial({
       uniforms: {
         colorGround: {
-          value: colorGround
+          value: colorGround,
         },
         colorSky: {
-          value: colorSky
+          value: colorSky,
         },
         horizonFactor: {
-          value: horizonFactor
-        }
+          value: horizonFactor,
+        },
       },
       vertexShader: `
         varying vec2 vUv;
-    
+
         void main() {
           vUv = uv;
           gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
@@ -148,27 +235,33 @@ function BackgroundSphere({ colorGround, colorSky, horizonFactor }) {
         uniform vec3 colorGround;
         uniform vec3 colorSky;
         uniform float horizonFactor;
-      
+
         varying vec2 vUv;
-        
+
         void main() {
           float h = clamp((vUv.y - 0.5) * horizonFactor + 0.5, 0.0, 1.0);
           gl_FragColor = vec4(mix(colorGround, colorSky, h), 1);
         }
       `,
-      side: THREE.BackSide
+      side: THREE.BackSide,
     })
   }, [colorGround, colorSky, horizonFactor])
 
   const geometry = new THREE.SphereBufferGeometry(200, 32, 32)
 
-  return (
-    <mesh geometry={geometry}
-      material={material} />
-  )
+  return <mesh geometry={geometry} material={material} />
 }
 
-function AnimatedLines({ path, nbPoints, radius, closed, color1, color2, backColorsOpacity, animSpeed }) {
+function AnimatedLines({
+  path,
+  nbPoints,
+  radius,
+  closed,
+  color1,
+  color2,
+  backColorsOpacity,
+  animSpeed,
+}) {
   const geometry = useMemo(() => {
     return new THREE.TubeBufferGeometry(path, nbPoints, radius, 8, closed)
   }, [path, nbPoints, radius, closed])
@@ -177,21 +270,21 @@ function AnimatedLines({ path, nbPoints, radius, closed, color1, color2, backCol
     return new THREE.ShaderMaterial({
       uniforms: {
         color1: {
-          value: color1
+          value: color1,
         },
         color2: {
-          value: color2
+          value: color2,
         },
         opacity: {
-          value: backColorsOpacity
+          value: backColorsOpacity,
         },
         time: {
-          value: 0.0
-        }
+          value: 0.0,
+        },
       },
       vertexShader: `
         varying vec2 vUv;
-    
+
         void main() {
           vUv = uv;
           gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
@@ -202,9 +295,9 @@ function AnimatedLines({ path, nbPoints, radius, closed, color1, color2, backCol
         uniform vec3 color2;
         uniform float opacity;
         uniform float time;
-      
+
         varying vec2 vUv;
-        
+
         void main() {
           float t = mod(vUv.x - time, 1.0);
 
@@ -229,21 +322,21 @@ function AnimatedLines({ path, nbPoints, radius, closed, color1, color2, backCol
     return new THREE.ShaderMaterial({
       uniforms: {
         color1: {
-          value: color1
+          value: color1,
         },
         color2: {
-          value: color2
+          value: color2,
         },
         opacity: {
-          value: 1.0
+          value: 1.0,
         },
         time: {
-          value: 0.0
-        }
+          value: 0.0,
+        },
       },
       vertexShader: `
         varying vec2 vUv;
-    
+
         void main() {
           vUv = uv;
           gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
@@ -254,9 +347,9 @@ function AnimatedLines({ path, nbPoints, radius, closed, color1, color2, backCol
         uniform vec3 color2;
         uniform float opacity;
         uniform float time;
-      
+
         varying vec2 vUv;
-        
+
         void main() {
           float t = mod(vUv.x - time, 1.0);
 
@@ -271,7 +364,7 @@ function AnimatedLines({ path, nbPoints, radius, closed, color1, color2, backCol
           gl_FragColor = vec4(mix(color1, color2, t), alpha * opacity);
         }
       `,
-      transparent: true
+      transparent: true,
     })
   }, [color1, color2])
 
@@ -295,10 +388,8 @@ function AnimatedLines({ path, nbPoints, radius, closed, color1, color2, backCol
 
   return (
     <>
-      <mesh geometry={geometry}
-        material={materialBack} />
-      <mesh geometry={geometry}
-        material={materialFront} />
+      <mesh geometry={geometry} material={materialBack} />
+      <mesh geometry={geometry} material={materialFront} />
     </>
   )
 }
@@ -309,14 +400,15 @@ const measurementNames = [
   'Narrow Waist Circumference',
   'High Hip Circumference',
   'Left Thigh Circumference',
-  'Left Ankle Circumference'
+  'Left Ankle Circumference',
 ]
 
 const measurements = measurementNames.map(name => {
-  const points = measurementRawData['measurement'][name]['line_points']
-    .map(([x, y, z]) => new THREE.Vector3(x, y, z))
+  const points = measurementRawData.measurement[name].line_points.map(
+    ([x, y, z]) => new THREE.Vector3(x, y, z),
+  )
 
-  const closed = measurementRawData['measurement'][name]['closed']
+  const closed = measurementRawData.measurement[name].closed
 
   const path = new THREE.CatmullRomCurve3(points, closed)
 
@@ -326,59 +418,114 @@ const measurements = measurementNames.map(name => {
 })
 
 export default function ModelViewer() {
+  const [skinType, setSkinType] = useState(skinTypeMap.IRON_SKIN)
+  const [isWireframe, setIsWireframe] = useState(false)
+  const [wireframeColor, setWireframeColor] = useState('#ffffff')
+  const [isSkin, setIsSkin] = useState(false)
   // The Angle between the horizon and the vertical limit of the camera toward up and down.
-  const upDownRad = 90.0 / 180.0 * Math.PI
+  const upDownRad = (90.0 / 180.0) * Math.PI
 
-  const [textureFilename, setTextureFilename] = useState('white-fabric.jpg')
+  // const [textureFilename, setTextureFilename] = useState('white-fabric.jpg')
+  const [textureFilename, setTextureFilename] = useState('the-hive.jpg')
   const [measurementIndex, setMeasurementIndex] = useState(-1)
 
   const onMeasurementButtonPressed = index => {
     setMeasurementIndex(index === measurementIndex ? -1 : index)
   }
-
-  const measurement = measurementIndex >= 0 ? measurements[measurementIndex] : null
-
+  const measurement =
+    measurementIndex >= 0 ? measurements[measurementIndex] : null
   return (
     <>
-      <Canvas style={{ background: '#A2CCB6', height: '80vh' }}
-        camera={{ fov: 60, position: [0, 0, 130] }}>
-        <Controls enableDamping
+      <Canvas
+        id='camera-body'
+        style={{
+          background: '#A2CCB6',
+          width: window.outerWidth / 2,
+          height: '95vh',
+          margin: 'auto',
+        }}
+        camera={{ fov: 80, position: [0, 0, 130] }}
+      >
+        <Controls
+          enableDamping
           enablePan={false}
-          enableZoom={true}
-          minDistance={40}
-          maxDistance={130}
+          enableZoom
+          minDistance={20}
+          maxDistance={150}
           dampingFactor={0.1}
           rotateSpeed={0.1}
-          minPolarAngle={(Math.PI / 2.0) - upDownRad}
-          maxPolarAngle={(Math.PI / 2.0) + upDownRad} />
+          minPolarAngle={Math.PI / 2.0 - upDownRad}
+          maxPolarAngle={Math.PI / 2.0 + upDownRad}
+        />
         <ambientLight intensity={0.5} />
         <spotLight intensity={0.5} position={[300, 300, 400]} />
         <spotLight intensity={0.5} position={[-300, 300, -400]} />
-        <BackgroundSphere colorGround={new THREE.Color(0xa0a0a0)}
+        <BackgroundSphere
+          colorGround={new THREE.Color(0xa0a0a0)}
           colorSky={new THREE.Color(0xefefef)}
-          horizonFactor={4.0} />
-        <group position={new THREE.Vector3(0, -58, 8)}
-          scale={new THREE.Vector3(0.07, 0.07, 0.07)}>
-          <LoadedObjModel ObjFilename={'guy.obj'} textureFilename={textureFilename} />
-          {measurement && (<AnimatedLines path={measurement.path}
-            nbPoints={measurement.nbPoints}
-            radius={4.0}
-            closed={measurement.closed}
-            color1={new THREE.Color(0x5def3a)}
-            color2={new THREE.Color(0x00e9ff)}
-            backColorsOpacity={0.3}
-            animSpeed={1.4} />)}
+          horizonFactor={4.0}
+        />
+        <group
+          position={new THREE.Vector3(0, -58, 0)}
+          scale={new THREE.Vector3(0.07, 0.07, 0.07)}
+        >
+          <LoadedObjModel
+            isSkin={isSkin}
+            isWireframe={isWireframe}
+            wireframeColor={parseInt(wireframeColor.replace(/#/, '0x', ''))}
+            skinType={skinType}
+            ObjFilename='guy.obj'
+            textureFilename={textureFilename}
+          />
+          {measurement && (
+            <AnimatedLines
+              path={measurement.path}
+              nbPoints={measurement.nbPoints}
+              radius={4.0}
+              closed={measurement.closed}
+              color1={new THREE.Color(0x5def3a)}
+              color2={new THREE.Color(0x00e9ff)}
+              backColorsOpacity={0.3}
+              animSpeed={1.4}
+            />
+          )}
         </group>
       </Canvas>
       <button onClick={() => onMeasurementButtonPressed(0)}>Poitrine</button>
       <button onClick={() => onMeasurementButtonPressed(1)}>Biceps</button>
-      <button onClick={() => onMeasurementButtonPressed(2)}>Tour de taille</button>
+      <button onClick={() => onMeasurementButtonPressed(2)}>
+        Tour de taille
+      </button>
       <button onClick={() => onMeasurementButtonPressed(3)}>Hanche</button>
       <button onClick={() => onMeasurementButtonPressed(4)}>Cuisse</button>
       <button onClick={() => onMeasurementButtonPressed(5)}>Cheville</button>
 
-      <button onClick={() => setTextureFilename('white-fabric.jpg')}>Texture 1</button>
-      <button onClick={() => setTextureFilename('fabric-red-white.jpg')}>Texture 2</button>
+      <button onClick={() => setTextureFilename('white-fabric.jpg')}>
+        Texture 1
+      </button>
+      <button onClick={() => setTextureFilename('fabric-red-white.jpg')}>
+        Texture 2
+      </button>
+      <button onClick={() => setIsWireframe(!isWireframe)}>wireframe</button>
+      <button onClick={() => setIsSkin(!isSkin)}>isSkin</button>
+      <select
+        defaultValue={skinType}
+        onChange={({ target: { value: typeName } }) => setSkinType(typeName)}
+      >
+        {Object.values(skinTypeMap).map(typeName => {
+          return (
+            <option key={typeName} value={typeName}>
+              {typeName}
+            </option>
+          )
+        })}
+      </select>
+      <SketchPicker
+        color={wireframeColor}
+        onChangeComplete={e => {
+          setWireframeColor(e.hex)
+        }}
+      />
     </>
   )
 }
