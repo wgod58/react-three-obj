@@ -3,21 +3,31 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "cannon": "^0.6.2",
     "react": "^16.8.6",
     "react-color": "^2.17.3",
     "react-dom": "^16.8.6",
-    "react-scripts": "3.0.1",
-    "react-three-fiber": "^2.1.4",
-    "three": "^0.104.0"
+    "react-scripts": "3.2.0",
+    "react-three-fiber": "^3.0.2",
+    "three": "^0.109.0"
+  },
+  "config": {
+    "port": 5000
   },
   "scripts": {
-    "start": "react-scripts start",
+    "start": "PORT=$npm_package_config_port react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "lint": "./node_modules/.bin/eslint \"./src/**/*.js\" \"./src/**/*.jsx\" ",
+    "lint:fix": "yarn lint --fix",
+    "deploy": "yarn lint:fix && yarn build && firebase deploy"
   },
   "eslintConfig": {
     "extends": "react-app"
+  },
+  "precommit":{
+
   },
   "browserslist": {
     "production": [
@@ -32,8 +42,8 @@
     ]
   },
   "devDependencies": {
-    "babel-eslint": "10.0.1",
-    "eslint": "^5.16.0",
+    "babel-eslint": "10.0.3",
+    "eslint": "^6.5.1",
     "eslint-config-prettier": "^6.0.0",
     "eslint-config-standard": "^14.1.0",
     "eslint-config-standard-jsx": "^8.1.0",

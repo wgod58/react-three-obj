@@ -1,14 +1,22 @@
 import * as THREE from 'three'
-import React, { useState, useEffect, useMemo, useRef } from 'react'
-import { extend, Canvas, useThree, useRender } from 'react-three-fiber'
+import React, { useState, useEffect, useReducer, useMemo, useRef } from 'react'
+import {
+  extend,
+  Canvas,
+  useThree,
+  useRender,
+  useFrame,
+} from 'react-three-fiber'
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import measurementRawData from '../data/measurements'
 import StyleMap, {
   typeMap as skinTypeMap,
+  // textureCube,
   // reset as skinReset,
 } from './modelViewStyle'
 import { SketchPicker } from 'react-color'
+import { textureCubeRefraction, textureCube } from './modelScene'
 
 // new THREE.MeshBasicMaterial()
 extend({ OrbitControls })
@@ -36,7 +44,9 @@ function loadTextureAsync(filename, onProgress) {
 
 // Note: Normally, the 3D model should have its normals already set.
 function computeNormals(group) {
+  // group.add(scene)
   group.traverse(child => {
+    // scene.add(child)
     if (child.isMesh) {
       const geo = new THREE.Geometry().fromBufferGeometry(child.geometry)
       geo.mergeVertices()
@@ -102,7 +112,7 @@ const setMaterils = (type, params) => group => {
 const skinSwitch = (group, isSkin) => {
   group.traverse(child => {
     if (child.isMesh) {
-      child.material.wireframe = isSkin
+      child.material.wireframe = !isSkin
     }
   })
 }
@@ -128,10 +138,25 @@ const putWireframe = (group, { color }) => {
   })
 }
 
-const defaultSetting = group => {
+const defaultSetting = (group, { isEnvMap, skinType }) => {
   group.traverse(child => {
     if (child.isMesh) {
+      child.addEventListener('mousedown', ev => {})
       child.material.needsUpdate = true
+      switch (skinType) {
+        case skinTypeMap.BLUE_WITH_LIGHT_EFFECT_IN_MESH:
+        case skinTypeMap.BLUE_WITH_LIGHT_EFFECT: {
+          child.material.envMap = isEnvMap ? textureCubeRefraction : null
+          break
+        }
+        case skinTypeMap.BLUE_WITH_PURPLE_EFFECT: {
+          break
+        }
+        default: {
+          child.material.envMap = isEnvMap ? textureCube : null
+          break
+        }
+      }
     }
   })
 }
@@ -142,6 +167,7 @@ function LoadedObjModel({
   isWireframe,
   wireframeColor,
   isSkin,
+  isEnvMap,
   skinType,
 }) {
   const [loadedGroup, setLoadedGroup] = useState(null)
@@ -152,6 +178,7 @@ function LoadedObjModel({
       .then(computeNormals)
       .then(computeUV)
       .then(setLoadedGroup)
+    // .then(group => scene.add(group))
   }, [ObjFilename])
 
   useEffect(() => {
@@ -160,39 +187,48 @@ function LoadedObjModel({
 
   useEffect(() => {
     // Assign the texture to the model if both are already loaded.
-    if (loadedGroup && texture) {
-      loadedGroup.traverse(child => {
-        // if (child.isMesh) {
-        //   materialHandler(child, skinTypeMap.IRON_SKIN, {
-        //     map: texture,
-        //   })
-        // }
-      })
-    }
+    // if (loadedGroup && texture) {
+    //   loadedGroup.traverse(child => {
+    //     if (child.isMesh) {
+    //     }
+    //   })
+    // }
   }, [loadedGroup, texture])
 
   if (loadedGroup) {
     setMaterils(skinType, {
       map: texture,
     })(loadedGroup)
-    if (isWireframe && !isSkin) {
+    if (isWireframe && isSkin) {
       putWireframe(loadedGroup, { color: wireframeColor })
     } else {
       removeWireframe(loadedGroup)
     }
     skinSwitch(loadedGroup, isSkin)
-    defaultSetting(loadedGroup)
+    defaultSetting(loadedGroup, { isEnvMap, skinType })
   }
 
-  return loadedGroup && <primitive object={loadedGroup} />
+  return (
+    loadedGroup && (
+      <primitive
+        // receiveShadow
+        // onClick={ev => console.log(ev)}
+        object={loadedGroup}
+      />
+    )
+  )
 }
 
 // Let the `orbitControls` component control the camera.
 function Controls(props) {
   const { camera } = useThree()
   const controls = useRef()
+  useEffect(() => {
+    const { current: cameraDom } = controls
+    cameraDom.target.y = 15
+  })
 
-  useRender(() => controls.current && controls.current.update())
+  useFrame(() => controls.current.update())
   return (
     <orbitControls
       ref={controls}
@@ -202,52 +238,41 @@ function Controls(props) {
   )
 }
 
+function Plane({ color, position: [, , z], size: [width, height] }) {
+  const material = useMemo(
+    () =>
+      new THREE.MeshBasicMaterial({
+        color,
+        envMap: textureCubeRefraction,
+      }),
+    [color],
+  )
+  const ground = useMemo(() => {
+    const geometry = new THREE.CircleGeometry(width, 6)
+    const ground = new THREE.Mesh(geometry, material)
+    ground.rotation.x = -Math.PI / 2
+    ground.scale.multiplyScalar(3)
+    // ground.castShadow = true
+    // ground.receiveShadow = true
+    ground.translateZ(z)
+    return ground
+  }, [width, z, material])
+
+  return <primitive object={ground} />
+}
+
 function BackgroundSphere({ colorGround, colorSky, horizonFactor }) {
-  // The horizonFactor should be greater or equal to 1,
-  // It represents the portion of the environment's arc from the bottom to the top
-  // that we want to be filled with the color gradiant.
-  // A value of 1 represent a gradiant from the bottom to the top,
-  // a value of 10 represent a thinner horizon where
-  // the ground and sky's colors are blending.
-
-  const material = useMemo(() => {
-    return new THREE.ShaderMaterial({
-      uniforms: {
-        colorGround: {
-          value: colorGround,
-        },
-        colorSky: {
-          value: colorSky,
-        },
-        horizonFactor: {
-          value: horizonFactor,
-        },
-      },
-      vertexShader: `
-        varying vec2 vUv;
-
-        void main() {
-          vUv = uv;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }
-      `,
-      fragmentShader: `
-        uniform vec3 colorGround;
-        uniform vec3 colorSky;
-        uniform float horizonFactor;
-
-        varying vec2 vUv;
-
-        void main() {
-          float h = clamp((vUv.y - 0.5) * horizonFactor + 0.5, 0.0, 1.0);
-          gl_FragColor = vec4(mix(colorGround, colorSky, h), 1);
-        }
-      `,
-      side: THREE.BackSide,
-    })
-  }, [colorGround, colorSky, horizonFactor])
-
-  const geometry = new THREE.SphereBufferGeometry(200, 32, 32)
+  const material = useMemo(
+    () =>
+      new THREE.MeshBasicMaterial({
+        // color: colorSky,
+        side: THREE.BackSide,
+        envMap: textureCubeRefraction,
+        // map: textureGeneral,
+      }),
+    [colorSky],
+  )
+  const [geometry] = useState(new THREE.SphereBufferGeometry(200, 32, 32))
 
   return <mesh geometry={geometry} material={material} />
 }
@@ -384,7 +409,7 @@ function AnimatedLines({
   useEffect(() => {
     materialBack.uniforms.time.value = time
     materialFront.uniforms.time.value = time
-  }, [time])
+  })
 
   return (
     <>
@@ -421,7 +446,71 @@ export default function ModelViewer() {
   const [skinType, setSkinType] = useState(skinTypeMap.IRON_SKIN)
   const [isWireframe, setIsWireframe] = useState(false)
   const [wireframeColor, setWireframeColor] = useState('#ffffff')
-  const [isSkin, setIsSkin] = useState(false)
+  const [isSkin, setIsSkin] = useState(true)
+  const [isEnvMap, setIsEnvMap] = useState(true)
+  const [[groundColor, skyColor], setBackground] = useState([
+    0xcccccc,
+    0xffffff,
+  ])
+  const [, setDefaultStyle] = useReducer((_, skinType) => {
+    setSkinType(skinType)
+    switch (skinType) {
+      case skinTypeMap.IRON_SKIN: {
+        setIsWireframe(false)
+        setIsEnvMap(true)
+        setIsSkin(true)
+        setBackground([0xcccccc, 0xffffff])
+        break
+      }
+      case skinTypeMap.HUMAN_BODY_SKIN_IN_MESH: {
+        setIsWireframe(true)
+        setWireframeColor('#000000')
+        setIsSkin(true)
+        setBackground([0xa1f4ff, 0x89999c])
+        break
+      }
+      case skinTypeMap.BLUE_WITH_PURPLE_EFFECT: {
+        setIsWireframe(false)
+        setIsSkin(true)
+        setBackground([0x4a008b, 0x0])
+        break
+      }
+      case skinTypeMap.BLUE_WITH_LIGHT_EFFECT_IN_MESH: {
+        setIsWireframe(true)
+        setWireframeColor('#05CFE8')
+        setIsSkin(true)
+        setIsEnvMap(true)
+        setBackground([0x004c64, 0x0])
+        break
+      }
+      case skinTypeMap.BLUE_WITH_LIGHT_EFFECT: {
+        setIsWireframe(false)
+        setWireframeColor('#ffffff')
+        setIsSkin(true)
+        setIsEnvMap(false)
+        setBackground([0x0, 0x101010])
+        break
+      }
+      case skinTypeMap.BLACK_SKINY: {
+        setIsWireframe(false)
+        setIsSkin(true)
+        setIsEnvMap(true)
+        setBackground([0xffffff, 0x171717])
+        break
+      }
+      case skinTypeMap.ORIGIN: {
+        setIsWireframe(true)
+        setWireframeColor('#000000')
+        setIsSkin(true)
+        setIsEnvMap(false)
+        setBackground([0xffffff, 0xdddddd])
+        break
+      }
+      default: {
+        break
+      }
+    }
+  }, skinType)
   // The Angle between the horizon and the vertical limit of the camera toward up and down.
   const upDownRad = (90.0 / 180.0) * Math.PI
 
@@ -440,11 +529,11 @@ export default function ModelViewer() {
         id='camera-body'
         style={{
           background: '#A2CCB6',
-          width: window.outerWidth / 2,
+          width: window.outerWidth * 0.95,
           height: '95vh',
           margin: 'auto',
         }}
-        camera={{ fov: 80, position: [0, 0, 130] }}
+        camera={{ fov: 80, position: [80, 0, 130] }}
       >
         <Controls
           enableDamping
@@ -453,23 +542,30 @@ export default function ModelViewer() {
           minDistance={20}
           maxDistance={150}
           dampingFactor={0.1}
-          rotateSpeed={0.1}
+          rotateSpeed={1}
           minPolarAngle={Math.PI / 2.0 - upDownRad}
           maxPolarAngle={Math.PI / 2.0 + upDownRad}
         />
-        <ambientLight intensity={0.5} />
-        <spotLight intensity={0.5} position={[300, 300, 400]} />
-        <spotLight intensity={0.5} position={[-300, 300, -400]} />
         <BackgroundSphere
-          colorGround={new THREE.Color(0xa0a0a0)}
-          colorSky={new THREE.Color(0xefefef)}
+          colorGround={new THREE.Color(groundColor).getHex()}
+          colorSky={new THREE.Color(skyColor).getHex()}
           horizonFactor={4.0}
         />
+
         <group
           position={new THREE.Vector3(0, -58, 0)}
-          scale={new THREE.Vector3(0.07, 0.07, 0.07)}
+          scale={new THREE.Vector3(0.05, 0.05, 0.05)}
         >
+          <ambientLight intensity={0.5} />
+          <spotLight intensity={0.5} position={[300, 300, 400]} />
+          <spotLight intensity={0.5} position={[-300, 300, -400]} />
+          <Plane
+            color={new THREE.Color(groundColor).getHex()}
+            position={[0, 0, 0]}
+            size={[300, 500]}
+          />
           <LoadedObjModel
+            isEnvMap={isEnvMap}
             isSkin={isSkin}
             isWireframe={isWireframe}
             wireframeColor={parseInt(wireframeColor.replace(/#/, '0x', ''))}
@@ -508,9 +604,12 @@ export default function ModelViewer() {
       </button>
       <button onClick={() => setIsWireframe(!isWireframe)}>wireframe</button>
       <button onClick={() => setIsSkin(!isSkin)}>isSkin</button>
+      <button onClick={() => setIsEnvMap(!isEnvMap)}>isEnvMap</button>
       <select
         defaultValue={skinType}
-        onChange={({ target: { value: typeName } }) => setSkinType(typeName)}
+        onChange={({ target: { value: typeName } }) => {
+          setDefaultStyle(typeName)
+        }}
       >
         {Object.values(skinTypeMap).map(typeName => {
           return (
